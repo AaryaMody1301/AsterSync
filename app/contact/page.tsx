@@ -1,0 +1,5 @@
+import type {Metadata} from 'next';
+import {ContactForm} from '@/components/contact-form';
+import {Asterisk,MapPin,ArrowRight} from 'lucide-react';
+export const metadata:Metadata={title:'Discuss your project',description:'Tell AsterSync about your website, software, automation, or data project. Start a conversation with our Surat-based studio.'};
+export default function Contact(){return <main id="main" className="wrap contact-page"><div className="contact-intro"><p className="eyebrow">LET’S MAKE SOMETHING USEFUL</p><h1>Good things start<br/>with a <span>conversation.</span></h1><p>Tell us what you’re thinking. A business challenge, an idea, or a process that could work better.</p><div className="contact-next"><h2>What happens next?</h2><ol><li><span>01</span> We read through your project brief.</li><li><span>02</span> We get in touch to understand the details.</li><li><span>03</span> We outline a practical way forward.</li></ol></div><div className="contact-location"><MapPin size={19}/><span>Based in Surat, Gujarat.<br/>Open to projects everywhere.</span></div></div><ContactForm/></main>}

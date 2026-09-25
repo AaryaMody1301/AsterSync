@@ -1,0 +1,3 @@
+import {z} from 'zod';
+export const enquirySchema=z.object({id:z.string().uuid(),name:z.string().trim().min(2,'Please enter your name.').max(100),email:z.string().trim().email('Please enter a valid email address.').max(254),company:z.string().trim().max(160).default(''),service:z.enum(['websites','automation','data','unsure']).default('unsure'),budget:z.enum(['not-set','under-50k','50k-150k','150k-500k','500k-plus']).default('not-set'),timeline:z.string().trim().max(100).default(''),message:z.string().trim().min(20,'Please tell us a little more about your project (at least 20 characters).').max(4000),website:z.string().max(200).default('')});
+export type Enquiry=z.infer<typeof enquirySchema>;
