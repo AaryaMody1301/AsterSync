@@ -1,9 +1,9 @@
 import {enquirySchema} from '@/lib/enquiries';
-import {enquiryDb} from '@/db/binding';
-import {env} from 'cloudflare:workers';
+import {enquiryDb,enquiryEnvironment} from '#enquiry-runtime';
 import {saveToSupabase} from '@/db/supabase';
 export async function POST(request:Request){
  try{
+  const env=enquiryEnvironment();
   if(request.headers.get('sec-fetch-site')==='cross-site')return Response.json({error:'Please submit through our contact page.'},{status:403});
   if(!request.headers.get('content-type')?.includes('application/json'))return Response.json({error:'Invalid request format.'},{status:415});
   if(Number(request.headers.get('content-length')||0)>16000)return Response.json({error:'Your message is too long.'},{status:413});
