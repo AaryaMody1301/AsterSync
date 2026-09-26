@@ -4,6 +4,6 @@ declare namespace Cloudflare {
     BUCKET?: R2Bucket;
     ENQUIRY_STORAGE?: 'd1' | 'supabase';
     SUPABASE_URL?: string;
-    SUPABASE_SECRET_KEY?: string;
+    SUPABASE_ENQUIRY_KEY?: string;
   }
 }

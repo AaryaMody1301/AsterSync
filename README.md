@@ -9,7 +9,7 @@ The AsterSync website: a software, automation, and data studio based in Surat.
 
 ## Database status
 
-**Supabase support is prepared but not activated.** A dedicated project still needs to be selected or created, the schema applied, and the private server key configured. The live form continues to use its existing D1 database until that cutover is verified. No Supabase database has been provisioned by this repository upload.
+The enquiry database is the dedicated **AsterSync** Supabase project in Mumbai (`ap-south-1`), reference `shsftfopegxkkatplyra`. The server sends validated enquiries through an authenticated Supabase Edge Function. The full database key remains inside Supabase; Sites holds only a private submission key. The previous D1 binding is retained for rollback and isolated local testing.
 
 See [Supabase setup and cutover](docs/supabase-setup.md). There are no database credentials or enquiry records in this repository.
 
@@ -34,7 +34,7 @@ npm run build
 npm run test:production
 ```
 
-The production audit checks rendered pages, navigation links, assets, metadata, 404 behavior, and contact submission behavior in an isolated local database. Supabase contract tests use mock network responses; they do not certify a live Supabase project or execute the SQL schema.
+The production audit checks rendered pages, navigation links, assets, metadata, 404 behavior, and contact submission behavior in an isolated local database. Local Supabase tests cover gateway authentication, validation, transport, and failure handling with mocked requests. Production activation also requires live database and function checks as described in the setup document.
 
 To run the compiled website locally with D1:
 
@@ -61,10 +61,12 @@ Enquiries are stored for owner review. Email notifications are not configured. T
 
 - `app/`: pages and the enquiry API.
 - `components/`: navigation, forms, interactive demos, and UI components.
-- `db/supabase.ts`: private server connection to the Supabase RPC.
-- `supabase/schema.sql`: prepared PostgreSQL table, permissions, and submission function.
+- `db/supabase.ts`: private server connection to the authenticated submission function.
+- `lib/enquiry-gateway.ts`: function authentication and validation.
+- `supabase/functions/enquiries/`: deployed function entrypoint and a non-secret key digest.
+- `supabase/schema.sql`: PostgreSQL schema applied as `create_aster_sync_enquiries`.
 - `drizzle/`: existing D1 migration, retained for the current database.
 - `scripts/audit-production.mjs`: compiled application audit.
-- `tests/supabase.test.ts`: Supabase transport and failure-handling tests.
+- `tests/`: gateway authentication, RPC, and transport tests.
 
 Keep private keys in your host's secret settings. Never prefix them with `NEXT_PUBLIC_` or `VITE_`, put them in browser code, or commit them. `.dev.vars*`, `.env*`, build output, local database state, and generated TypeScript caches are ignored.

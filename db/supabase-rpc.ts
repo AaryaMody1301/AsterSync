@@ -1,24 +1,22 @@
 import type {Enquiry} from '../lib/enquiries.ts';
-import type {SubmissionResult} from './supabase-rpc.ts';
 
-type GatewayConfig = {SUPABASE_URL?: string; SUPABASE_ENQUIRY_KEY?: string};
+export type SubmissionResult = {status: 'created' | 'duplicate' | 'rate_limited' | 'conflict'; id: string};
+type SupabaseConfig = {SUPABASE_URL?: string; SUPABASE_SECRET_KEY?: string};
 
-// This private key can only submit enquiries through the authenticated gateway.
-// The full database secret stays inside Supabase and never reaches this Worker.
-export async function saveToSupabase(enquiry: Enquiry, config: GatewayConfig, fetcher: typeof fetch = fetch): Promise<SubmissionResult> {
-  const submissionKey = config.SUPABASE_ENQUIRY_KEY || '';
-  if (!config.SUPABASE_URL || !/^[a-f0-9]{64}$/.test(submissionKey)) {
+// Server only. The browser always submits to our same-origin API.
+export async function saveSupabaseRpc(enquiry: Enquiry, config: SupabaseConfig, fetcher: typeof fetch = fetch): Promise<SubmissionResult> {
+  if (!config.SUPABASE_URL || !config.SUPABASE_SECRET_KEY?.startsWith('sb_secret_')) {
     throw new Error('Supabase server configuration is incomplete');
   }
   const url = new URL(config.SUPABASE_URL);
   if (url.protocol !== 'https:' || url.username || url.password || url.pathname !== '/') {
     throw new Error('Supabase project URL must be an HTTPS origin');
   }
-  const response = await fetcher(new URL('/functions/v1/enquiries', url), {
+  const response = await fetcher(new URL('/rest/v1/rpc/submit_enquiry', url), {
     method: 'POST',
-    headers: {'Content-Type': 'application/json', 'X-AsterSync-Key': submissionKey},
-    body: JSON.stringify({...enquiry, email: enquiry.email.toLowerCase()}),
-    signal: AbortSignal.timeout(15000),
+    headers: {'Content-Type': 'application/json', apikey: config.SUPABASE_SECRET_KEY},
+    body: JSON.stringify({payload: {...enquiry, email: enquiry.email.toLowerCase()}}),
+    signal: AbortSignal.timeout(10000),
     cache: 'no-store',
   });
   if (!response.ok) throw new Error(`Supabase submission unavailable (${response.status})`);

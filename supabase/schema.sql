@@ -1,5 +1,5 @@
--- Prepared initial schema. Apply once to the selected AsterSync Supabase project
--- using a named Supabase migration. This file has not been applied remotely.
+-- Applied to AsterSync (shsftfopegxkkatplyra) on 2026-09-25 as the named
+-- migration create_aster_sync_enquiries. Apply once only to fresh environments.
 begin;
 
 create table public.enquiries (

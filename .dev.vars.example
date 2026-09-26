@@ -1,5 +1,5 @@
 # Copy to .dev.vars for local Worker testing. Never commit real keys.
-# Leave d1 until the Supabase schema and private server key are configured.
+# Use a separate Supabase project and submission key for development.
 ENQUIRY_STORAGE=d1
 SUPABASE_URL=
-SUPABASE_SECRET_KEY=
+SUPABASE_ENQUIRY_KEY=

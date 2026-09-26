@@ -1,58 +1,50 @@
-# Supabase setup and cutover
+# Supabase operations
 
-Status: integration code is ready for configuration; no remote schema or project has been created for AsterSync yet.
+## Production configuration
 
-## Choose the project
+- Project: AsterSync, reference `shsftfopegxkkatplyra`.
+- Organization: Invest-Smart.
+- Region: Mumbai (`ap-south-1`).
+- Project creation quote: $0/month on 25 September 2026. Plan limits and future usage still apply.
+- Initial migration: `create_aster_sync_enquiries`, source in `supabase/schema.sql`.
+- Edge Function: `enquiries`.
 
-Choose the Supabase organization and a dedicated AsterSync project. Confirm the displayed project cost before creation. Do not reuse or restore an unrelated project without the owner's direction. Mumbai (`ap-south-1`) is a reasonable region for a Surat-based business, subject to availability.
+The browser submits to the website's same-origin `/api/enquiries` route. The server validates the request, then calls the Supabase function using a private submission key. The function authenticates that key, validates the enquiry again, and uses its built-in `SUPABASE_SECRET_KEYS` environment to call the private database RPC. There is no endpoint for reading enquiries.
 
-## Apply the prepared schema
+## Runtime variables on Sites
 
-Apply `supabase/schema.sql` once to the selected project using a named Supabase migration. When using the CLI, first run `supabase migration new create_aster_sync_enquiries`, copy the reviewed SQL into the generated file, and apply through the normal linked-project workflow. The management integration can instead apply the same SQL as a named migration.
-
-The schema creates:
-
-- `public.enquiries`, with UUID references, input constraints, and an email/time index.
-- Row-level security, with all table privileges revoked from `PUBLIC`, `anon`, and `authenticated`.
-- `public.submit_enquiry(payload jsonb)`, an invoker function executable only by `service_role`.
-- Transactional duplicate handling and an atomic five-submissions-per-email-per-hour limit.
-
-The database is accessed only by the website server. Public and signed-in browser clients cannot read the table or call its submission function. The server key bypasses RLS and must remain private. An email-based limit and honeypot reduce repeat spam; they are not a comprehensive bot-protection system.
-
-## Configure server secrets
-
-In the hosting platform's runtime environment settings, set:
-
-| Variable | Value |
+| Variable | Purpose |
 | --- | --- |
-| `SUPABASE_URL` | The selected project's HTTPS origin, e.g. `https://PROJECT_REF.supabase.co` |
-| `SUPABASE_SECRET_KEY` | A new-format `sb_secret_...` key, stored as a private server secret |
-| `ENQUIRY_STORAGE` | Keep `d1` until migration and verification finish; then set `supabase` |
+| `SUPABASE_URL` | `https://shsftfopegxkkatplyra.supabase.co` |
+| `SUPABASE_ENQUIRY_KEY` | Secret 32-byte random key encoded as 64 lowercase hexadecimal characters |
+| `ENQUIRY_STORAGE` | `supabase` for production; `d1` for local isolated tests or an intentional rollback |
 
-Create or copy the secret through Supabase's API key settings and enter it through the host's secure secret settings. Do not paste it into chat, GitHub, a client-side variable, or a committed file. For local development only, use the ignored `.dev.vars` file. The transport uses native `fetch` and the Supabase REST API, so no browser SDK or new runtime dependency is needed.
+The submission key is stored as a secret in Sites. Only its SHA-256 digest is committed in `supabase/functions/enquiries/key-sha256.json`. The digest cannot be used as the key. Never put the plaintext key in GitHub, chat, or a browser variable. The full Supabase database secret is not stored in Sites or this repository.
 
-## Move existing enquiries safely
+## Function authentication
 
-1. Inspect the existing D1 record count and take a private backup. Never commit enquiry data.
-2. Arrange a brief write pause for the final transfer so submissions cannot be missed between export and switching providers.
-3. Import records with their existing UUIDs and fields. Convert D1 `created_at` milliseconds to PostgreSQL timestamps using `to_timestamp(created_at / 1000.0)`.
-4. Compare record counts and IDs, then verify sample fields privately.
-5. Set `ENQUIRY_STORAGE=supabase`, deploy, and resume submissions.
-6. Keep the old D1 database during the validation window. Do not delete it as part of the initial switch.
+`verify_jwt=false` is intentional: the function implements custom server authentication using `X-AsterSync-Key`, a constant-length digest comparison, and rejection before database access. It does not accept anonymous requests or use a publishable API key as authentication. A missing or incorrect submission key returns 401. The function accepts only POST, limits request bodies to 16 KB, and validates the same schema as the website.
 
-If the old database is empty, no record transfer is needed. If reverting after new Supabase submissions, reconcile those records before switching back; changing the provider alone does not copy data. The application returns a retryable error on a Supabase outage instead of silently writing new records to D1.
+The Deno import map pins Zod to `3.25.76`. Deploy the entrypoint, import map, digest file, and shared imports together. The import map is `supabase/functions/enquiries/deno.json`; the entrypoint is `supabase/functions/enquiries/index.ts`.
 
-## Verify before considering the cutover complete
+To rotate the submission key, generate a new random 32-byte key, update its SHA-256 digest, deploy the function, replace the Sites secret, and redeploy the website promptly. Coordinate the change because requests using the old key will fail between these steps. Never retrieve or publish the Supabase database secret to rotate this limited key.
 
-Use an explicitly labelled synthetic enquiry, then verify it in the selected Supabase project:
+## Database protection
 
-- First submission returns 201 and creates exactly one row.
-- Retrying the same payload/reference returns 200 without another row.
-- Invalid input and the honeypot fail before storage.
-- Six distinct submissions from one test email allow the first five and reject the sixth with 429, including concurrent submissions.
-- Reusing a reference for different details returns 409.
-- `anon` and `authenticated` cannot select enquiries or execute the function.
-- Supabase security advisors report no exposed enquiry table/function.
-- Simulated database failure returns 503 and preserves the visitor's input for retry.
+`public.enquiries` has row-level security enabled and no public client policies. All table privileges and RPC execution are revoked from `PUBLIC`, `anon`, and `authenticated`. Only `service_role` can call `public.submit_enquiry(jsonb)`. The RPC uses `SECURITY INVOKER`, validates storage constraints, serializes duplicate IDs, and atomically limits each email to five enquiries per hour.
 
-Remove only clearly identified synthetic records after verification. Update the website's privacy notice to identify Supabase once it is actually processing enquiries. Production activation is not complete until these checks pass against the selected project.
+The security advisor's informational “RLS Enabled No Policy” notice is expected: all client access is intentionally denied, and only the server role accesses the table. Do not add public read or write policies to silence that notice.
+
+## Verification and old storage
+
+Before activation, the original D1 database contained zero enquiries, so no records needed transferring. The D1 binding is retained, and the application never silently falls back to it during a Supabase outage. Visitors receive a retryable error and retain their form details.
+
+Verification covers successful storage, retries without duplicates, conflicting references, concurrent rate limiting, invalid input, unauthorized function requests, and denied client database access. Transactional SQL tests roll back their changes; synthetic live-function records are removed after verification.
+
+If rolling back after real Supabase submissions arrive, first reconcile those records into the destination database. Changing `ENQUIRY_STORAGE` does not copy data. Keep backups and enquiry exports private.
+
+## Development
+
+Use a separate Supabase development project and key. Apply the initial schema once, generate a separate submission key/digest, deploy the function there, and put that project's URL and key in the ignored `.dev.vars` file. The production key is never needed for ordinary page or component work.
+
+Email notifications are not configured. Review real enquiries in the Supabase table editor using your authenticated project account.

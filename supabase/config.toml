@@ -1,0 +1,8 @@
+project_id = "astersync"
+
+[functions.enquiries]
+# The function verifies X-AsterSync-Key against a SHA-256 digest before any DB access.
+# This is custom server authentication, not an anonymous function.
+verify_jwt = false
+entrypoint = "./functions/enquiries/index.ts"
+import_map = "./functions/enquiries/deno.json"

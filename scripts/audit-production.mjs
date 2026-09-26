@@ -93,14 +93,14 @@ try {
   const fetchMock = createFetchMock();
   fetchMock.disableNetConnect();
   await mf.setOptions({...options, fetchMock, bindings: {
-    ENQUIRY_STORAGE: 'supabase', SUPABASE_URL: 'https://example.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_test_only',
+    ENQUIRY_STORAGE: 'supabase', SUPABASE_URL: 'https://example.supabase.co', SUPABASE_ENQUIRY_KEY: 'a'.repeat(64),
   }});
   for (const [status, expected] of [['created', 201], ['duplicate', 200], ['rate_limited', 429], ['conflict', 409]]) {
-    fetchMock.get('https://example.supabase.co').intercept({path: '/rest/v1/rpc/submit_enquiry', method: 'POST'})
+    fetchMock.get('https://example.supabase.co').intercept({path: '/functions/v1/enquiries', method: 'POST'})
       .reply(200, {id: input.id, status});
     check((await submit(input)).status === expected, `Supabase ${status} must return ${expected}`);
   }
-  fetchMock.get('https://example.supabase.co').intercept({path: '/rest/v1/rpc/submit_enquiry', method: 'POST'})
+  fetchMock.get('https://example.supabase.co').intercept({path: '/functions/v1/enquiries', method: 'POST'})
     .reply(503, {error: 'Synthetic database outage'});
   check((await submit({...input, id: crypto.randomUUID()})).status === 503, 'Supabase outage must remain retryable');
   const currentDb = await mf.getD1Database('DB');
