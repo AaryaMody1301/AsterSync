@@ -47,6 +47,8 @@ Apply the initial migration once to a fresh local database. `npm start` prints t
 
 ## Hosting
 
+Vercel is supported through the committed `vercel.json` and `pnpm run build:vercel`. See [Vercel deployment](docs/vercel-deployment.md) for the commercial hosting plan, private server environment variables, and deployment checks. This preparation does not change the current live Sites address.
+
 GitHub contains the source code. The running site remains hosted on Sites. This application has server-rendered routes and a server-side enquiry API, so GitHub Pages cannot run it as-is. No automatic deployment workflow from GitHub has been configured.
 
 For Sites updates, build the project, push the exact source state to its Sites source repository, then save and deploy that version with its build archive. The Sites project association lives in `.openai/hosting.json`; it is an identifier, not a credential. Other hosting platforms must support this Cloudflare Worker build and its environment bindings. See [runtime details](docs/runtime.md).

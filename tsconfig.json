@@ -24,6 +24,7 @@
       }
     ],
     "paths": {
+      "#enquiry-runtime": ["./db/runtime-cloudflare.ts"],
       "@/*": [
         "./*"
       ]
