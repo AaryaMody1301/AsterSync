@@ -33,6 +33,14 @@ for (const path of paths) {
     if (src.startsWith('/_next/') || /\.(css|woff2|webp|svg)$/.test(src)) assets.add(src);
   }
 }
+// Verify the server-to-client prefill contract, including untrusted queries.
+for (const [query, service] of [
+  ['?service=websites', 'websites'], ['?service=automation', 'automation'], ['?service=data', 'data'],
+  ['', 'unsure'], ['?service=invalid', 'unsure'], ['?service=data&service=websites', 'unsure'],
+]) {
+  const html = (await page('/contact' + query)).replace(/\\+"/g, '"');
+  check(html.includes(`"initialService":"${service}"`), `Contact prefill failed for ${query || 'no query'}`);
+}
 for (const src of assets) {
   const response = await fetch(new URL(src.replaceAll('&amp;', '&'), origin));
   check(response.status === 200, `Missing asset ${src}`);

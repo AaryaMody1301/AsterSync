@@ -64,6 +64,14 @@ try {
     }
   }
   counts.links = links.size;
+  // Verify the server-to-client prefill contract, including untrusted queries.
+  for (const [query, service] of [
+    ['?service=websites', 'websites'], ['?service=automation', 'automation'], ['?service=data', 'data'],
+    ['', 'unsure'], ['?service=invalid', 'unsure'], ['?service=data&service=websites', 'unsure'],
+  ]) {
+    const html = (await page('/contact' + query)).replace(/\\+"/g, '"');
+    check(html.includes(`"initialService":"${service}"`), `Contact prefill failed for ${query || 'no query'}`);
+  }
   for (const asset of assets) {
     const res = await get(asset);
     check(res.status === 200, `Missing asset ${asset}: ${res.status}`);

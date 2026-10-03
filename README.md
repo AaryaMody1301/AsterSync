@@ -28,6 +28,7 @@ Open the URL printed by the dev server. Pages and demos work immediately; the en
 ## Verify and build
 
 ```sh
+npm run lint
 node node_modules/typescript/bin/tsc --noEmit
 npm run test:supabase
 npm run build
@@ -35,6 +36,8 @@ npm run test:production
 ```
 
 The production audit checks rendered pages, navigation links, assets, metadata, 404 behavior, and contact submission behavior in an isolated local database. Local Supabase tests cover gateway authentication, validation, transport, and failure handling with mocked requests. Production activation also requires live database and function checks as described in the setup document.
+
+GitHub Actions runs these checks and separately builds and audits the Next.js/Vercel production server. The workflow uses isolated local storage and mocked requests; it does not deploy the site.
 
 To run the compiled website locally with D1:
 

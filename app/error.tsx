@@ -1,4 +1,5 @@
 "use client";
+import Link from 'next/link';
 
 export default function ErrorPage({ reset }: { reset: () => void }) {
   return <main id="main" className="wrap recovery-page">
@@ -7,7 +8,7 @@ export default function ErrorPage({ reset }: { reset: () => void }) {
     <p>Please try again, or return to the homepage.</p>
     <div className="recovery-actions">
       <button className="button" onClick={reset}>Try again</button>
-      <a href="/" className="button button-outline">Back to home</a>
+      <Link href="/" className="button button-outline">Back to home</Link>
     </div>
   </main>;
 }
